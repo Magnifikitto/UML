@@ -1,1 +1,35 @@
-123
+@startuml test
+
+actor User as u
+participant "Back End" as b
+participant "File server" as f
+participant "Data base" as d
+
+activate u
+u -> b: "POST /api/v1/postreview"
+activate b
+alt "При наличии системы кэша"
+    b -> b : Проверка наличия\nзаписи отзыва с\n id запроса в кеше 
+end
+
+b -> d :  Проверка наличия записи отзыва с id запроса
+activate d
+alt "При наличии системы кэша"
+    b -> b : Сохранение\nзаписи отзыва с\n id запроса в кеше 
+end
+alt "Если отзыв с таким id запроса уже есть"
+    b-->u : response 200 "Отзыв на данный запрос получен"
+else "Отзыв с таким id запроса в системе отсутствует"
+    b -> f: сохранить файл из отзыва
+    activate f
+    f --> b: вернуть путь до файла
+    deactivate f
+    b -> d: Сохранить информацию из отзыва с путем до файла в бд
+    d --> b: Информация сохранена
+    deactivate d
+    b --> u: Response 200 "отзыв сохранен"
+    deactivate b
+end 
+deactivate u
+
+@enduml
